@@ -1,0 +1,85 @@
+import googlemaps
+import matplotlib.pyplot as plt
+from datetime import datetime, timedelta
+import time
+
+################### Configuración de la clave de API (fundamental)#####################
+API_KEY = "AIzaSyAg8LC4BahsnfmIyDK1tcefz5Tnyu_nyZU"  # Reemplazar con la clave de API de Google Maps
+gmaps = googlemaps.Client(key=API_KEY)
+
+class GPSInteligenteConAPI:
+    def init(self):
+        self.tiempos_estimados = []
+#############################################   ##########################################
+    def obtener_tiempo_viaje(self, origen, destino, hora_salida):
+        """
+        Obtiene el tiempo estimado de viaje entre un origen y un destino
+        a una hora específica, considerando el tráfico en tiempo real.
+        """
+        resultado = gmaps.directions(
+            origen,
+            destino,
+            mode="driving",
+            departure_time=hora_salida,
+            traffic_model="best_guess"
+        )
+
+        if resultado:
+            duracion = resultado[0]["legs"][0]["duration_in_traffic"]["value"] / 60  # Convertir a minutos
+            return duracion
+        else:
+            print("No se pudo obtener el tiempo de viaje.")
+            return None
+
+    def obtener_tiempos_dia_completo(self, origen, destino):
+        """
+        Simula el tiempo de viaje en intervalos de 3 horas a lo largo del día.
+        """
+        hora_inicial = datetime.now()
+        tiempos = []
+        horas = []
+
+        for i in range(0, 24, 3):  # Revisar cada 3 horas
+            hora_actual = hora_inicial + timedelta(hours=i)
+            tiempo_viaje = self.obtener_tiempo_viaje(origen, destino, hora_actual)
+
+            if tiempo_viaje is not None:
+                tiempos.append(tiempo_viaje)
+                horas.append(hora_actual.strftime("%H:%M"))
+                print(f"Tiempo estimado a las {hora_actual.strftime('%H:%M')}: {tiempo_viaje} minutos")
+
+            time.sleep(1)  # Espera para evitar límite de la API
+
+        self.tiempos_estimados = tiempos
+        return horas, tiempos
+
+    def mostrar_grafico_tiempos(self, horas, tiempos):
+        """
+        Muestra un gráfico del tiempo estimado de viaje a lo largo del día.
+        """
+        plt.figure(figsize=(10, 5))
+        plt.plot(horas, tiempos, marker='o', color='b', linestyle='-')
+        plt.xlabel("Hora del día")
+        plt.ylabel("Tiempo estimado de viaje (minutos)")
+        plt.title("Evolución del tiempo de viaje durante el día")
+        plt.grid(True)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
+
+def main():
+    # Crea una instancia del GPS inteligente con API
+    gps_api = GPSInteligenteConAPI()
+
+    # Definir origen y destino
+    origen = "Universidad Autónoma del Perú, Lima, Peru"
+    destino = "Estación Pumacahua, Villa María del Triunfo, Lima, Peru"
+
+    # Obtener cietos tiempos estimados a lo largo del día
+    horas, tiempos = gps_api.obtener_tiempos_dia_completo(origen, destino)
+
+    # Mostrar el gráfico detallado del tiempo de viaje durante el dia
+    gps_api.mostrar_grafico_tiempos(horas, tiempos)
+
+if _name_ == "_main_":
+    main()
